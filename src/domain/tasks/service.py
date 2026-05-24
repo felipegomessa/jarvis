@@ -1,0 +1,46 @@
+"""Servicos de consulta de tarefas — RF-004.3."""
+
+from __future__ import annotations
+
+import sqlite3
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from src.domain.agenda.service import DEFAULT_TZ
+from src.domain.tasks.models import Task
+from src.domain.tasks.repo import list_tasks
+
+
+def pending_tasks(conn: sqlite3.Connection) -> list[Task]:
+    return list_tasks(conn, status="pending")
+
+
+def done_tasks(conn: sqlite3.Connection, limit: int = 50) -> list[Task]:
+    return list_tasks(conn, status="done", limit=limit)
+
+
+def overdue_tasks(
+    conn: sqlite3.Connection, tz: ZoneInfo = DEFAULT_TZ
+) -> list[Task]:
+    """Tarefas pendentes com due_at no passado (em relacao ao agora no tz local)."""
+    now = datetime.now(tz)
+    candidates = list_tasks(conn, status="pending", only_due_until=now)
+    return candidates
+
+
+def tasks_due_today(
+    conn: sqlite3.Connection, tz: ZoneInfo = DEFAULT_TZ
+) -> list[Task]:
+    now = datetime.now(tz)
+    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
+    return list_tasks(conn, status="pending", only_due_until=end_of_day)
+
+
+def tasks_due_this_week(
+    conn: sqlite3.Connection, tz: ZoneInfo = DEFAULT_TZ
+) -> list[Task]:
+    now = datetime.now(tz)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = today + timedelta(days=(6 - today.weekday()))
+    week_end = week_end.replace(hour=23, minute=59, second=59)
+    return list_tasks(conn, status="pending", only_due_until=week_end)

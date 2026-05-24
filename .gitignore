@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# venv (uv)
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+*.env
+!.env.example
+
+# SQLite
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models cache (sentence-transformers)
+.cache/
+models/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Build
+build/
+dist/
+
+# Roteiro do vídeo (uso pessoal, não vai pro repo)
+ROTEIRO.md
+
+# Notas internas de desenvolvimento (não publicar)
+CLAUDE.md
+HANDOFF.md
+NOTES.md
+STATUS.md
+.claude/
+temp/
+memory/
+
+# Documentos do processo SDD (uso interno)
+decisions.md
+spec/
