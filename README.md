@@ -94,6 +94,9 @@ gerenciamento de materiais via upload.
 - **ruff** — lint + format (regras E, F, W, I, B, UP, SIM, RUF)
 - **mypy** (não-estrito) — checagem de tipos opcional
 
+### Ferramentas de IA no desenvolvimento
+- **Claude Code** — assistente de desenvolvimento utilizado para gerar código a partir das especificações no padrão **SDD (Spec-Driven Development)**: para cada funcionalidade, escreveu-se primeiro `requirements.md`, `design.md` e `tasks.md` com critérios de aceitação verificáveis; só então o Claude Code gerou o código correspondente, revisado pelo autor antes da integração.
+
 ---
 
 ## Arquitetura

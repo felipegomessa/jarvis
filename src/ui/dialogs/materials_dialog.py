@@ -77,6 +77,7 @@ def open_materials_dialog() -> None:
                     on_upload=on_upload,
                     multiple=False,
                     max_file_size=50_000_000,
+                    auto_upload=True,
                 ).props("accept='.pdf,.txt,.md' color=primary").classes("flex-1")
                 ui.button(
                     "Indexar pasta /data",

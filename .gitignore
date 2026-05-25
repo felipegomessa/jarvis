@@ -49,6 +49,16 @@ models/
 build/
 dist/
 
+# Arquivos temporários de IDE/editor (snapshots de sessão)
+*.tmp.*
+# Lock files do Microsoft Word
+~$*.docx
+~$*.doc
+~WRL*.tmp
+
+# Documentação de entrega (uso pessoal, não publicar)
+docs/
+
 # Roteiro do vídeo (uso pessoal, não vai pro repo)
 ROTEIRO.md
 
