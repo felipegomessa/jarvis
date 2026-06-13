@@ -106,8 +106,19 @@ class GemmaClient:
         async for chunk in resp:  # type: ignore[union-attr]
             if not chunk.choices:
                 continue
-            delta = chunk.choices[0].delta
-            content = getattr(delta, "content", None)
+            choice = chunk.choices[0]
+            delta = getattr(choice, "delta", None)
+            content = getattr(delta, "content", None) if delta else None
+            if not content:
+                # O endpoint Qwen da LIA ignora stream=True e devolve a resposta
+                # inteira num único chunk com delta=None e o texto em
+                # choice.message.content. Sem este fallback, stream_chat renderia
+                # 0 tokens. Endpoints OpenAI-compliant (delta) continuam intactos.
+                msg = getattr(choice, "message", None)
+                if isinstance(msg, dict):
+                    content = msg.get("content")
+                elif msg is not None:
+                    content = getattr(msg, "content", None)
             if content:
                 yield content
 

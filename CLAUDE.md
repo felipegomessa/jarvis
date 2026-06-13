@@ -58,7 +58,7 @@ P7. **Reprodutibilidade** — Setup em máquina nova com `uv sync` instala tudo.
 |---|---|---|
 | Linguagem / Python | 3.12 | [D-011](decisions.md#d-011) |
 | Deps / Venv | uv + pyproject.toml + uv.lock | [D-011](decisions.md#d-011) |
-| LLM | Gemma 12B via endpoint LIA UFMS (OpenAI-compatible) | — |
+| LLM | Qwen2.5-14B-Instruct-AWQ via endpoint LIA UFMS (OpenAI-compatible). Antes Gemma 12B — migrado em 2026-06-13 (LIA aposentou o Gemma); classe `GemmaClient` mantida por compat. | [D-028](decisions.md#d-028) |
 | LLM client | `openai` AsyncOpenAI + dual streaming + retries via `tenacity` | [D-014](decisions.md#d-014), [D-018](decisions.md#d-018) |
 | Tool Calling | Prompt-based JSON + agent loop próprio | [D-007](decisions.md#d-007) |
 | Embeddings | `intfloat/multilingual-e5-small` via sentence-transformers | [D-004](decisions.md#d-004) |

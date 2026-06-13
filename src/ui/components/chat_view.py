@@ -186,7 +186,6 @@ class ChatView:
         pending_tool: dict | None = None
         tool_events: list[tuple[dict, dict]] = []
         response_md: ui.markdown | None = None
-        accumulated_reply = ""
 
         with response_container:
             ui.label("JARVIS").style(
@@ -206,13 +205,20 @@ class ChatView:
                         tool_events.append((pending_tool or {}, event))
                         pending_tool = None
                     elif t == "final":
-                        accumulated_reply = event.get("reply", "")
+                        reply = event.get("reply", "")
                         if response_md is None:
-                            response_md = ui.markdown(accumulated_reply).classes(
+                            response_md = ui.markdown("").classes(
                                 "jarvis-md-chat"
                             ).style("color:#f5f5f5; font-size:15px; line-height:1.6")
-                        else:
-                            response_md.content = accumulated_reply
+                        # Efeito de digitacao: o Qwen nao streama de verdade
+                        # (D-018/quirk LIA), entao revelamos a resposta em blocos
+                        # para simular a digitacao token-a-token na UI. Passo
+                        # adaptativo: ~120 frames no total, independente do tamanho.
+                        step = max(2, len(reply) // 120)
+                        for i in range(step, len(reply), step):
+                            response_md.content = reply[:i]
+                            await asyncio.sleep(0.012)
+                        response_md.content = reply
                     elif t == "error":
                         ui.label(f"⚠ {event.get('message', '')}").style(
                             "color:#ff6b6b; font-size:13px"

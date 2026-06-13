@@ -649,6 +649,48 @@ Formato: [Architecture Decision Record (ADR)](https://adr.github.io/) simplifica
 
 ---
 
+## D-028 — Migração do LLM: Gemma 12B → Qwen2.5-14B-Instruct-AWQ (LIA UFMS)
+
+- **Data**: 2026-06-13.
+- **Contexto**: o projeto foi construído sobre o **Gemma 12B** servido pela LIA
+  UFMS (`https://llm.liaufms.org/v1/gemma-3-12b-it`). Em 2026-06-13 o endpoint
+  Gemma passou a retornar **404 — `Instance 'gemma-3-12b-it' not found`** (a LIA
+  aposentou a instância) e o token antigo passou a dar **401 Invalid API token**.
+  Um notebook de referência do professor (`testetoken.ipynb`) revelou o endpoint
+  ativo: **Qwen2.5-14B-Instruct-AWQ** em
+  `https://llm.liaufms.org/v1/qwen2-5-14b-instruct-awq`, com novo token.
+- **Decisão**: migrar a configuração do LLM para o Qwen (novas `JARVIS_LLM_*`
+  em `.env`/`.env.example`). **Manter** a classe `GemmaClient` e o módulo
+  `src/llm/gemma_client.py` com o nome histórico — o cliente é OpenAI-compatível
+  e funciona com o Qwen sem alteração estrutural; renomear tudo (classe, arquivo,
+  ~27 referências) traria risco/ruído sem ganho funcional para a entrega.
+- **Razão**: P7 (reprodutibilidade) — o setup precisa apontar para o endpoint que
+  de fato existe. A troca é só de configuração; a arquitetura OpenAI-compatible
+  (D-014/D-018) já abstrai o provedor. Documentar aqui evita que o nome "Gemma"
+  espalhado pelo código confunda a banca ("o aluno deve explicar o código").
+- **Quirk de streaming (importante)**: ao contrário do Gemma, o endpoint Qwen da
+  LIA **ignora `stream=True`** e devolve a resposta inteira num **único chunk**
+  com `delta=None` e o texto em `choice.message.content` (não em `delta.content`).
+  O `stream_chat` original (que só lê `delta.content`) renderizava 0 tokens.
+  Adicionado fallback em `gemma_client.py::stream_chat` para extrair de
+  `message.content` quando o delta vier vazio (endpoints OpenAI-compliant seguem
+  usando `delta`). Como a UI consome a resposta final via evento `final` do agent
+  loop (não via `stream_chat`), o chat nunca ficou em branco; o efeito de
+  digitação na UI (`chat_view`) é simulado revelando o texto em blocos.
+- **Alternativas consideradas**: renomear todo o código Gemma→Qwen (rejeitada —
+  alto esforço, alto risco, zero ganho funcional para o Trabalho 1).
+- **Consequências**:
+  - `.env`/`.env.example`: `JARVIS_LLM_BASE_URL`, `JARVIS_LLM_MODEL`,
+    `JARVIS_LLM_API_KEY` apontam para o Qwen.
+  - `gemma_client.py::stream_chat` ganhou o fallback `delta → message.content`.
+  - `chat_view.py`: efeito de digitação para o evento `final`.
+  - `ruff` limpo, `pytest` 115 passed / 3 skipped, smoke live (Qwen) 3/3.
+  - **Dívida de naming**: nome "Gemma" permanece em CLAUDE.md (§3), `GemmaClient`,
+    `gemma_client.py` e ADRs anteriores — intencional e documentado aqui.
+- **Relacionada a**: [D-014](#d-014), [D-017](#d-017), [D-018](#d-018).
+
+---
+
 ## Próximas decisões pendentes (futuras Specs ou Trabalho 2)
 
 - Idioma do dataset (PT-BR vs misto) — para teste de retrieval multilingual.
