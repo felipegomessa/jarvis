@@ -17,6 +17,11 @@ from src.rag.types import IngestResult
 
 SUPPORTED_EXT = {".pdf", ".txt", ".md"}
 
+# Meta-documentação que vive em /data mas NÃO é material de estudo. Indexá-la
+# polui o retrieval (o README do dataset chegava a ranquear em #1 para perguntas
+# conceituais, sem conter conteúdo real). Comparação por nome, case-insensitive.
+EXCLUDED_FILENAMES = {"readme.md"}
+
 
 def _compute_sha256(path: Path, buf_size: int = 64 * 1024) -> str:
     """Hash SHA-256 do conteúdo (streaming)."""
@@ -221,7 +226,9 @@ def ingest_directory(dir_path: Path, recursive: bool = False) -> list[IngestResu
     candidates = [
         p
         for p in dir_path.glob(pattern)
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXT
+        if p.is_file()
+        and p.suffix.lower() in SUPPORTED_EXT
+        and p.name.lower() not in EXCLUDED_FILENAMES
     ]
 
     results: list[IngestResult] = []

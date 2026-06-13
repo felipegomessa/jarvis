@@ -19,6 +19,7 @@ Eventos emitidos pelo gerador:
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections.abc import AsyncIterator
 from typing import Any
@@ -54,7 +55,7 @@ def _parse_json_response(text: str) -> dict[str, Any]:
 
     # Tenta direto
     try:
-        return json.loads(text)
+        return _loads_lenient(text)
     except json.JSONDecodeError:
         pass
 
@@ -64,11 +65,33 @@ def _parse_json_response(text: str) -> dict[str, Any]:
     if start >= 0 and end > start:
         sub = text[start : end + 1]
         try:
-            return json.loads(sub)
+            return _loads_lenient(sub)
         except json.JSONDecodeError as e:
             raise ValueError(f"JSON inválido após extração: {e}") from e
 
     raise ValueError("não foi possível extrair JSON da resposta")
+
+
+# Barras invertidas que tratamos como literais de LaTeX e dobramos no reparo.
+# Honramos só os escapes que o LLM usa de propósito em prosa: \" \\ \/ \n \r \t
+# \uXXXX. Deixamos \b e \f FORA de propósito: form-feed/backspace nunca são
+# intencionais num chat, mas colidem com LaTeX comum (\beta, \frac) — então
+# preferimos preservá-los como '\beta'/'\frac' a virar caracteres de controle.
+_INVALID_JSON_ESCAPE = re.compile(r'\\(?!["\\/nrtu])')
+
+
+def _loads_lenient(s: str) -> dict[str, Any]:
+    """json.loads tolerante a barras invertidas cruas de LaTeX (\\sigma, \\frac).
+
+    Estrito primeiro; só na falha dobra as '\\' que não iniciam um escape honrado
+    e re-tenta. Best-effort: cobre o caso real (comandos LaTeX crus do Qwen em
+    respostas matemáticas) sem mexer em '\\n'/'\\t' legítimos de quebra de linha.
+    """
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        repaired = _INVALID_JSON_ESCAPE.sub(r"\\\\", s)
+        return json.loads(repaired)
 
 
 class AgentLoop:
