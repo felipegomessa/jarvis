@@ -23,6 +23,51 @@ from src.ui.components.tool_call_card import render_tool_call_chip
 from src.ui.state import get_state, notify_sessions_changed
 
 
+def _collect_rag_sources(
+    tool_events: list[tuple[dict, dict]],
+) -> list[dict[str, Any]]:
+    """Extrai as fontes (chunks) recuperadas pelas chamadas de `buscar_material_rag`.
+
+    Dedupe por `chunk_id`, preservando a ordem de recuperação (relevância).
+    """
+    sources: list[dict[str, Any]] = []
+    seen: set[Any] = set()
+    for call_evt, result_evt in tool_events:
+        if call_evt.get("tool") != "buscar_material_rag":
+            continue
+        output = result_evt.get("output")
+        if not isinstance(output, dict):
+            continue
+        for ch in output.get("chunks", []) or []:
+            if not isinstance(ch, dict):
+                continue
+            key = ch.get("chunk_id")
+            if key in seen:
+                continue
+            seen.add(key)
+            sources.append(ch)
+    return sources
+
+
+def _render_rag_sources(tool_events: list[tuple[dict, dict]]) -> None:
+    """Renderiza um bloco discreto 'Fontes' com os documentos recuperados (A3)."""
+    sources = _collect_rag_sources(tool_events)
+    if not sources:
+        return
+    with ui.column().classes("w-full max-w-3xl self-start gap-1 mt-1"):
+        ui.label("Fontes").style(
+            "color:#8e8ea0; font-size:11px; font-weight:600; "
+            "letter-spacing:0.5px; text-transform:uppercase"
+        )
+        for i, ch in enumerate(sources, start=1):
+            title = ch.get("document_title", "documento")
+            pos = ch.get("position")
+            pos_txt = f" · trecho #{pos}" if pos is not None else ""
+            ui.label(f"[Doc {i}] {title}{pos_txt}").style(
+                "color:#b4b4c4; font-size:12px"
+            )
+
+
 class ChatView:
     """Encapsula o estado de render do chat (título, mensagens, input)."""
 
@@ -181,11 +226,11 @@ class ChatView:
         # Após a resposta final, renderiza chips de tool calls abaixo (não somem
         # ao fechar — cada chip abre seu próprio dialog modal com Entrada/Saída).
         if tool_events:
-            with response_container, ui.row().classes(
-                "gap-2 flex-wrap mt-2"
-            ):
-                for call_evt, result_evt in tool_events:
-                    render_tool_call_chip(call_evt, result_evt)
+            with response_container:
+                with ui.row().classes("gap-2 flex-wrap mt-2"):
+                    for call_evt, result_evt in tool_events:
+                        render_tool_call_chip(call_evt, result_evt)
+                _render_rag_sources(tool_events)
 
     def reset(self) -> None:
         """Limpa o chat (chamado por 'Novo chat')."""
@@ -235,11 +280,13 @@ class ChatView:
         def _flush_pending_chips() -> None:
             if not pending_tools or self._messages_area is None:
                 return
-            with self._messages_area, ui.row().classes(
-                "w-full max-w-3xl gap-2 flex-wrap self-start"
-            ):
-                for call_evt, result_evt in pending_tools:
-                    render_tool_call_chip(call_evt, result_evt)
+            with self._messages_area:
+                with ui.row().classes(
+                    "w-full max-w-3xl gap-2 flex-wrap self-start"
+                ):
+                    for call_evt, result_evt in pending_tools:
+                        render_tool_call_chip(call_evt, result_evt)
+                _render_rag_sources(pending_tools)
             pending_tools.clear()
 
         for m in msgs:

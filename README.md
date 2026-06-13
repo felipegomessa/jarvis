@@ -31,10 +31,10 @@ gerenciamento de materiais via upload.
 
 | Funcionalidade | Descrição | Status |
 |---|---|---|
-| **3.1 RAG** | Indexação de PDF/TXT/MD em chunks, busca vetorial via embeddings, geração com contexto e citações | ✅ |
-| **3.2 Agenda** | CRUD de eventos com tipo (aula/prova/trabalho/outro), local, intervalo de datas | ✅ |
+| **3.1 RAG** | Indexação de PDF/TXT/MD em chunks, busca vetorial via embeddings, geração com contexto e citações `[Doc N]` | ✅ |
+| **3.2 Agenda** | CRUD completo de eventos (criar/consultar/editar/remover) com tipo (aula/prova/trabalho/outro), local, intervalo de datas | ✅ |
 | **3.3 Tarefas** | CRUD de tarefas com prazo, prioridade (normal/alta/urgente) e status pendente/concluída | ✅ |
-| **Tool Calling** | 8 ferramentas registradas; LLM escolhe via prompt-based JSON; agent loop com retry | ✅ |
+| **Tool Calling** | 10 ferramentas registradas; LLM escolhe via prompt-based JSON; agent loop com retry | ✅ |
 | **Auditoria** | Toda chamada de tool persistida em `tool_call_logs` (consultável via UI) | ✅ |
 | **GUI moderna** | ChatGPT-style: sidebar colapsável, chat central, dialogs modais, calendário unificado | ✅ |
 | **Persistência de conversas** | Sessões e mensagens em SQLite; restauração via sidebar "Recentes" | ✅ |
@@ -43,12 +43,14 @@ gerenciamento de materiais via upload.
 
 | Tool | Função |
 |---|---|
-| `buscar_material_rag` | Busca semântica em chunks indexados; retorna trechos relevantes + citações |
+| `buscar_material_rag` | Busca semântica em chunks indexados; retorna o texto completo dos trechos relevantes + instrução de grounding para citar `[Doc N]` |
 | `consultar_agenda` | Consulta eventos por intervalo de datas ou palavras-chave (hoje/amanhã/semana) |
 | `adicionar_evento` | Cria novo evento (título, data/hora, tipo, local, descrição) |
+| `editar_evento` | Edita um evento existente (localizado por `event_id` ou `titulo`): horário, local, tipo, título |
+| `remover_evento` | Remove/cancela um evento (localizado por `event_id` ou `titulo`) |
 | `listar_tarefas` | Lista tarefas filtradas por status/prioridade |
 | `adicionar_tarefa` | Cria nova tarefa (título, prazo, prioridade) |
-| `concluir_tarefa` | Marca tarefa como concluída |
+| `concluir_tarefa` | Marca tarefa como concluída (por `task_id` ou `titulo`) |
 | `listar_materiais` | Lista documentos indexados (título, tipo, contagem de chunks) |
 | `consultar_calendario` | Consulta unificada de eventos + tarefas (com prazo) num intervalo de datas |
 
@@ -68,10 +70,10 @@ gerenciamento de materiais via upload.
 - **Agent loop próprio** — coordena múltiplas chamadas de tool em sequência até a resposta final, com reparo de JSON malformado
 
 ### RAG (Retrieval-Augmented Generation)
-- **sentence-transformers** com modelo `intfloat/multilingual-e5-small` — embeddings densos locais (768 dim)
+- **sentence-transformers** com modelo `intfloat/multilingual-e5-small` — embeddings densos locais (384 dim)
 - **sqlite-vec** — extensão SQLite para busca vetorial (vetores armazenados na própria base)
 - **pdfplumber** — extração de texto de PDFs
-- **Recursive Character Splitter próprio** — chunking ~800 chars com overlap 150
+- **Recursive Character Splitter próprio** — chunking ~800 chars com overlap 150; cada chunk é uma fatia contígua exata do texto original (overlap real a partir da fonte)
 
 ### Persistência e dados
 - **SQLite** (via `sqlite3` nativo do Python) — base única do projeto
@@ -133,7 +135,7 @@ gerenciamento de materiais via upload.
 │  ├── tasks/             │    │  ├── chunk.py                │
 │  ├── chat/              │    │  ├── embed.py                │
 │  └── calendar_view/     │    │  ├── retrieve.py             │
-│  (regras de negócio)    │    │  └── pipeline.py             │
+│  (regras de negócio)    │    │  └── prompt.py               │
 └──────────┬──────────────┘    └──────────────┬───────────────┘
            │                                  │
            └────────────────┬─────────────────┘
@@ -237,16 +239,16 @@ gerenciamento de materiais via upload.
 │   │   ├── embed.py                sentence-transformers (lazy load)
 │   │   ├── retrieve.py             Busca por similaridade no sqlite-vec
 │   │   ├── prompt.py               Construção do prompt RAG com contexto
-│   │   └── pipeline.py             Orquestração end-to-end
+│   │   └── populate.py             CLI de ingestão em lote da pasta data/
 │   ├── domain/                     Regras de negócio (camada de domínio)
 │   │   ├── agenda/                 models, repo, service
 │   │   ├── tasks/                  models, repo, service
 │   │   ├── chat/                   sessões e mensagens persistidas
 │   │   └── calendar_view/          Leitura unificada eventos+tarefas (via VIEW SQL)
-│   ├── tools/                      8 tools + registry
+│   ├── tools/                      10 tools + registry
 │   │   ├── registry.py             Catálogo + construção do system prompt
 │   │   ├── tool_rag.py             buscar_material_rag
-│   │   ├── tool_agenda.py          consultar_agenda, adicionar_evento
+│   │   ├── tool_agenda.py          consultar_agenda, adicionar_evento, editar_evento, remover_evento
 │   │   ├── tool_tasks.py           listar_tarefas, adicionar_tarefa, concluir_tarefa
 │   │   ├── tool_materials.py       listar_materiais
 │   │   └── tool_calendar.py        consultar_calendario (unificado)
@@ -278,6 +280,9 @@ gerenciamento de materiais via upload.
 ├── data/                           Dataset RAG (PDFs, .txt, .md indexáveis)
 │   ├── README.md                   Inventário do dataset
 │   └── uploads/                    Arquivos enviados via UI (criado em runtime)
+│
+├── scripts/                        Utilitários de linha de comando
+│   └── seed_demo.py                Popula agenda + tarefas + ingere data/ (idempotente)
 │
 ├── spec/                           Documentação de design por feature
 │   ├── 000-foundation/             Decisões transversais
@@ -345,6 +350,22 @@ que ficará em cache local (`~/.cache/huggingface/`) e não será baixado novame
 
 Ver `.env.example` para a lista completa.
 
+### Popular dados de demonstração (opcional)
+
+Para deixar a agenda e a lista de tarefas com conteúdo realista (útil para a
+demo e os testes) e indexar o dataset da pasta `data/`:
+
+```powershell
+# Agenda + tarefas (datas relativas a hoje) + ingestão de ./data
+.venv\Scripts\python.exe -m scripts.seed_demo
+
+# Apenas agenda + tarefas (sem ingerir documentos)
+.venv\Scripts\python.exe -m scripts.seed_demo --no-ingest
+```
+
+O script é **idempotente** (marca o que cria com `[seed-demo]` e nunca apaga
+dados criados pelo usuário) — pode rodar quantas vezes quiser.
+
 ---
 
 ## Como executar
@@ -400,7 +421,7 @@ A UI abre em **http://127.0.0.1:8080**.
 .venv/bin/python -m pytest -q
 ```
 
-Saída esperada: **~104 passed, 3 skipped** (os 3 skipped são smoke tests do LLM real, executados opt-in).
+Saída esperada: **~115 passed, 3 skipped** (os 3 skipped são smoke tests do LLM real, executados opt-in).
 
 ### Apenas testes unitários (rápidos)
 

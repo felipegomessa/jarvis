@@ -77,6 +77,8 @@ ignore = [
 "src/ui/**" = ["SIM117"]
 # Testes podem usar pytest.raises(Exception) para checar que qualquer erro foi levantado
 "tests/**" = ["B017"]
+# Scripts CLI inserem o PROJECT_ROOT em sys.path antes de importar src/ (E402 legítimo)
+"scripts/**" = ["E402"]
 
 # ----------------- pytest -----------------
 [tool.pytest.ini_options]

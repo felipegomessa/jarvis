@@ -39,18 +39,3 @@ class RetrievalResult(BaseModel):
     chunks: list[RetrievedChunk] = Field(default_factory=list)
     no_relevant_context: bool = False
     threshold_used: float = 0.6
-
-
-class Citation(BaseModel):
-    doc_id: int
-    doc_title: str
-    chunk_id: int
-    position: int
-    distance: float
-
-
-class RagResponse(BaseModel):
-    text_chunk_streaming: str = ""
-    citations: list[Citation] = Field(default_factory=list)
-    no_relevant_context: bool = False
-    finished: bool = False

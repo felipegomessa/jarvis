@@ -15,30 +15,52 @@ async def _buscar_material_rag(args: dict[str, Any]) -> dict[str, Any]:
     if not pergunta:
         raise ValueError("argumento 'pergunta' obrigatório")
 
-    top_k = int(args.get("top_k", 5))
+    top_k = int(args.get("top_k", 4))
     retrieval = await search_async(pergunta, top_k=top_k)
 
+    # Numeramos os trechos como [Doc N] para a LLM citar a fonte na resposta.
+    # Enviamos o TEXTO COMPLETO do chunk (não uma prévia), pois é o contexto que
+    # fundamenta a geração — truncar aqui degradaria a qualidade do RAG (A1).
     chunks_payload = [
         {
+            "ref": f"Doc {i}",
             "chunk_id": c.chunk_id,
             "document_id": c.document_id,
             "document_title": c.document_title,
             "position": c.position,
             "distance": round(c.distance, 4),
-            "text_preview": c.text[:400],
+            "text": c.text,
         }
-        for c in retrieval.chunks
+        for i, c in enumerate(retrieval.chunks, start=1)
     ]
     logger.info(
         f"buscar_material_rag: '{pergunta[:60]}...' -> {len(chunks_payload)} chunks "
         f"(no_relevant={retrieval.no_relevant_context})"
     )
 
+    # Instrução de grounding lida pela LLM antes de compor a resposta (A2):
+    # responder só com base nos trechos, citar [Doc N] e não alucinar.
+    if retrieval.no_relevant_context or not chunks_payload:
+        instrucao = (
+            "Nenhum trecho relevante foi encontrado nos materiais. NÃO invente: "
+            "responda ao usuário que não encontrou material relevante sobre o tema "
+            "e sugira que ele carregue documentos pertinentes."
+        )
+    else:
+        instrucao = (
+            "Responda à pergunta do usuário APENAS com base nos trechos acima "
+            "(campo 'text'). Cite a fonte como [Doc N: título] sempre que afirmar "
+            "algo (use o campo 'ref'). Se os trechos forem insuficientes para "
+            "responder, diga claramente que não encontrou material suficiente. "
+            "Não use conhecimento externo nem invente informações."
+        )
+
     return {
         "pergunta": pergunta,
         "no_relevant_context": retrieval.no_relevant_context,
         "threshold_used": retrieval.threshold_used,
         "count": len(chunks_payload),
+        "instrucao": instrucao,
         "chunks": chunks_payload,
     }
 
@@ -62,7 +84,7 @@ def _register() -> None:
                     },
                     "top_k": {
                         "type": "integer",
-                        "description": "Número de trechos a retornar (default 5).",
+                        "description": "Número de trechos a retornar (default 4).",
                     },
                 },
                 "required": ["pergunta"],

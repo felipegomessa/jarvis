@@ -12,7 +12,6 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-
 # --- Helpers de formatação --------------------------------------------------
 
 def add_hr(p):

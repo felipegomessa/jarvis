@@ -19,11 +19,16 @@ env/
 *.env
 !.env.example
 
-# SQLite
+# SQLite (índice regenerável via `populate` + `seed_demo`)
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# Dataset: livros-texto de terceiros (~88 MB) — recuperáveis pelo link do Drive
+# documentado em data/README.md. Os 5 docs indexados (Artigos + Material de Aula)
+# permanecem versionados.
+data/Livros/
 
 # Logs
 logs/
@@ -56,21 +61,17 @@ dist/
 ~$*.doc
 ~WRL*.tmp
 
-# Documentação de entrega (uso pessoal, não publicar)
+# Documentação de entrega gerada (Word/PDF) — regerável via scripts/
 docs/
 
 # Roteiro do vídeo (uso pessoal, não vai pro repo)
 ROTEIRO.md
 
-# Notas internas de desenvolvimento (não publicar)
-CLAUDE.md
-HANDOFF.md
-NOTES.md
-STATUS.md
+# Caches/efêmeros internos (não versionar)
 .claude/
 temp/
 memory/
 
-# Documentos do processo SDD (uso interno)
-decisions.md
-spec/
+# Os docs de continuidade e do processo SDD SÃO versionados intencionalmente
+# (CLAUDE.md, decisions.md, STATUS.md, NOTES.md, HANDOFF.md, spec/,
+# PLANO_MELHORIAS_T1.md) — permitem retomar o projeto de outra sessão.
