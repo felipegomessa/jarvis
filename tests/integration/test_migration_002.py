@@ -13,8 +13,8 @@ def test_migration_002_applies_and_bumps_version(tmp_path: Path) -> None:
     db_path = tmp_path / "t.db"
     with get_connection(db_path) as conn:
         v = apply_migrations(conn)
-        # Após Fase 8, esperamos v=4 (001..004 aplicadas)
-        assert v == 4
+        # apply_migrations aplica TODAS as migrations; após a Spec 007, v=5
+        assert v == 5
 
     with get_connection(db_path) as conn:
         # content_hash existe em documents

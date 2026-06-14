@@ -1,7 +1,36 @@
 # STATUS — JARVIS Acadêmico (Onde Paramos)
 
-> **Atualizado em**: 2026-06-12
+> **Atualizado em**: 2026-06-13
 > **Versão da UI**: 2.0 — ChatGPT-style dark + Calendário unificado estilo Google Calendar.
+
+## 🆕 ONDE PARAMOS (2026-06-13) — Spec 007 (Aprendizado / Trabalho 2)
+
+**Erro 1 (PDF ilegível) corrigido** (ADR D-029): guarda de qualidade na ingestão
+rejeita lixo `(cid:N)`; dataset re-indexado (4 docs / 119 chunks, sem lixo).
+
+**Spec 007 — Melhorias de Aprendizado: implementada e testada offline.** Entrega o
+requisito obrigatório do T2 (≥2 funcionalidades, ≥1 interativa):
+1. **Prova eletrônica** (interativa): gera questões MC + dissertativas de vários
+   documentos, usuário responde, sistema corrige (MC determinística + dissertativa
+   por LLM-juiz, nota sugerida) e dá **nota 0–10**.
+2. **Dificuldades + plano de estudos**: agrega desempenho por tópico, recomenda
+   revisão (RAG) e monta plano com botão "Adicionar à agenda" (adianta a Func. 3.4).
+
+- **Camadas novas** (D-030): `src/domain/learning/` (models+repo), `src/learning/`
+  (generator/grader/coach/service), `src/llm/{client,json_utils}.py`,
+  `rag.get_document_chunks` (corrige **Falha 4**), `src/tools/tool_learning.py`
+  (5 tools → **15 no total**), `src/ui/dialogs/exam_dialog.py` (menu "+").
+- **Migration 005** (v5): quizzes/quiz_documents/quiz_questions/quiz_attempts/quiz_answers.
+- **Dep nova**: `python-docx` (relatório Word). `pytest` **162 passed / 3 skipped**,
+  `ruff` limpo.
+
+**Próximos passos (sequência combinada)**:
+1. **Resolver o dataset** — recuperar *The Origins* (OCR/cópia limpa) + chegar a
+   ≥10 docs indexados. (Vem ANTES dos testes funcionais.)
+2. **Testar** as 2 funcionalidades com a LLM real (gerar prova → responder →
+   nota → plano).
+3. **Relatório Word das 2 funcionalidades** (RF-007.10 / T-007.15) — entregável.
+4. (Por último) relatórios Word de auditoria do enunciado + análise de erros.
 
 ## 🧭 ONDE PARAMOS (2026-06-12, ~21h) — ler isto primeiro
 

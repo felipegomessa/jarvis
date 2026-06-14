@@ -691,6 +691,95 @@ Formato: [Architecture Decision Record (ADR)](https://adr.github.io/) simplifica
 
 ---
 
+## D-029 — Ingestão: guarda de qualidade de texto (rejeita PDF ilegível)
+
+- **Data**: 2026-06-13.
+- **Contexto**: durante a preparação da análise de erros (Trabalho 2), a inspeção
+  do índice revelou que **`The_Origins_of_Logistic_Regression.pdf`** havia sido
+  ingerido como **383 chunks de lixo `(cid:N)`** — 0% de palavras reais. O PDF usa
+  fontes **sem mapa de caracteres (sem ToUnicode CMap)**; `pdfplumber`, `pdfminer`
+  e `PyMuPDF` (testados) **todos** devolvem `(cid:N)`/caracteres de controle. A
+  única guarda existente em `ingest_document` era `if not text.strip()`, que não
+  pega lixo **não-vazio**. Resultado: embeddings de ruído poluíam o índice e
+  desviavam o retrieval (perguntas sobre esse doc retornavam trechos de outros).
+  Isso **violava a própria política do CLAUDE.md §8** ("PDF sem texto extraível →
+  skipar, logar warning, continuar").
+- **Decisão**: adicionar um **guarda de qualidade** após a extração em
+  `src/rag/ingest.py`. Métrica `real_word_ratio(text)` = fração de tokens que são
+  palavras reais (`^[A-Za-zÀ-ÿ]{2,}$`). Se `< MIN_REAL_WORD_RATIO` (0.25), recusa
+  com `status="error"`, `reason="unreadable_text"` e `logger.warning`, cumprindo a
+  §8. Calibrado contra o dataset: docs bons 0.53-0.69; lixo 0.00 → corte em 0.25
+  com folga, **sem** rejeitar docs parcialmente sujos (figuras/fórmulas).
+- **Razão**: P5/§8 (erros tratados, nunca silenciosos) + qualidade de RAG (índice
+  não envenenado). Métrica simples e explicável ("o aluno deve explicar o código").
+- **PyMuPDF rejeitado como dependência**: testado, **não** recupera este arquivo
+  (fonte sem mapa de caracteres → recuperável só por OCR). Não foi adicionado ao
+  `pyproject`/`uv.lock` para preservar reprodutibilidade (P7).
+- **Consequências**:
+  - `ingest.py`: funções públicas `real_word_ratio` e `is_readable_text` + checagem
+    no passo 3b de `ingest_document`; constante `MIN_REAL_WORD_RATIO`.
+  - Dataset re-indexado: doc 4 (383 chunks-lixo) removido; índice agora
+    **4 documentos / 119 chunks / 119 vetores**, consistente e sem lixo 100%.
+  - Novos testes `tests/unit/test_ingest_quality.py` (5). Suíte: **127 passed,
+    3 skipped**, `ruff` limpo.
+  - **Pendência de dataset**: `The_Origins` precisa de **OCR** ou de uma **cópia
+    com texto selecionável** para voltar ao índice (requisito de ≥10 docs do
+    enunciado). Decisão de dados a tratar antes da entrega.
+- **Registro de análise de erros (Trabalho 2)**: esta é a **Falha 1** (recuperação/
+  ingestão), agora **corrigida**. Falhas deixadas **em aberto** para o relatório:
+  (2) threshold filtra só o melhor chunk, não cada um (`retrieve.py:62`);
+  (3) sem aterramento obrigatório — LLM pode responder do próprio conhecimento sem
+  chamar `buscar_material_rag` (geração); (4) sem leitura por documento / pedidos
+  estruturais ("índice", "resuma o doc X") inviáveis. Reserva: duplicação por
+  overlap; healthcheck só no boot.
+- **Relacionada a**: [D-005](#d-005), [D-021](#d-021), [D-022](#d-022).
+
+---
+
+## D-030 — Camada `learning/`, client LLM default e relatório `.docx` (Spec 007)
+
+- **Data**: 2026-06-13.
+- **Contexto**: a Spec 007 (Melhorias de Aprendizado — prova eletrônica + dificuldades/
+  plano) precisa de orquestração que combina **LLM + RAG + domínio**. Isso não cabe
+  em `domain/` (só importa `core/`) nem em `tools/` (não pode importar `llm/`, para
+  não fechar o ciclo `llm/agent ↔ tools/registry`). Além disso, uma tool acionada
+  pela LLM precisa do `GemmaClient`, mas o contrato de handler é `handler(args)`
+  (`agent.py:216`) e o `AppState.gemma` vive em `src/ui/` (camada proibida para
+  `tools/`). Auditoria da spec (spec-auditor) levantou ambos como bloqueadores.
+- **Decisão 1 — nova camada `src/learning/`**: orquestra geração/correção/coach.
+  Pode importar `core`, `domain`, `rag`, `llm`; é importada por `ui/` e `tools/`.
+  `src/domain/learning/` (models + repo) permanece puro (só `core/`). CLAUDE.md
+  §4/§4.1 atualizados.
+- **Decisão 2 — client LLM default** (`src/llm/client.py`): `set_default_client`/
+  `get_default_client` (singleton de processo, no estilo `get_settings`/`get_embedder`),
+  setado no boot em **`src/ui/app.py`** (onde o `GemmaClient` é criado, ~linha 36).
+  `learning/*` recebe `gemma` opcional e cai no default. Assim `tools/tool_learning`
+  importa **apenas `learning/`** (não `llm/` nem `ui/`) — §4.1 preservado
+  literalmente; sem ciclo (`gemma_client` importa só `core`+`llm.{exceptions,types}`,
+  verificado). A UI e os testes continuam injetando o client explicitamente.
+- **Decisão 3 — leitura por documento** (`rag.get_document_chunks`): lê os chunks de
+  UM documento em ordem (sem embeddings). Habilita a geração de provas e a tool
+  `ler_documento`, e **corrige a Falha 4** da análise de erros (recuperação sem
+  escopo por documento — "leia/resuma o documento X / me dê o índice").
+- **Decisão 4 — dependência `python-docx`**: adicionada ao `pyproject` para gerar o
+  relatório acadêmico Word das 2 funcionalidades (RF-007.10). Uso pontual de
+  entrega, não afeta o runtime do app. Lockfile re-gerado (`uv lock`). Alternativa
+  rejeitada: gerar `.docx` à mão (frágil) ou só `.md` (não cumpre "formato Word").
+- **Modelo de dados** (migration 005): `quizzes`, `quiz_documents` (N:N de fontes),
+  `quiz_questions` (mc|open, `source_chunk_id` p/ aterramento), `quiz_attempts`
+  (nota 0–10), `quiz_answers` (pontos + feedback). `PRAGMA user_version = 5`.
+- **Correção**: MC determinística; dissertativa via **LLM-juiz** com rubrica →
+  nota **sugerida** (0–1) + feedback. Nota final = Σpontos/Σmax × 10.
+- **Consequências**: +camada `learning/`, +`domain/learning/`, +`llm/client.py`,
+  +`llm/json_utils.py` (parsing extraído do agent, retrocompat preservada),
+  +`rag.get_document_chunks`, +`tools/tool_learning.py` (5 tools → **15 no total**),
+  +`ui/dialogs/exam_dialog.py` (menu "+"), +migration 005, +`python-docx`.
+  `pytest` **162 passed / 3 skipped**, `ruff` limpo.
+- **Relacionada a**: [D-007](#d-007), [D-013](#d-013), [D-019](#d-019),
+  [D-022](#d-022), [D-029](#d-029).
+
+---
+
 ## Próximas decisões pendentes (futuras Specs ou Trabalho 2)
 
 - Idioma do dataset (PT-BR vs misto) — para teste de retrieval multilingual.

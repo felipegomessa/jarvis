@@ -79,3 +79,46 @@ async def search_async(
     distance_threshold: float | None = None,
 ) -> RetrievalResult:
     return await asyncio.to_thread(search, query, top_k, distance_threshold)
+
+
+def get_document_chunks(
+    document_id: int, limit: int | None = None
+) -> list[RetrievedChunk]:
+    """Chunks de UM documento em ordem de posição (sem embeddings).
+
+    Diferente de `search` (busca semântica global), lê o documento inteiro/escopado
+    — usado para gerar provas e para a tool `ler_documento` (corrige a Falha 4 da
+    análise de erros: recuperação sem escopo por documento). `distance` não se
+    aplica aqui e é preenchido com 0.0 (campo é obrigatório em `RetrievedChunk`).
+    """
+    sql = (
+        "SELECT c.id AS chunk_id, c.text, c.position, c.document_id, "
+        "       d.title AS document_title "
+        "  FROM chunks c JOIN documents d ON d.id = c.document_id "
+        " WHERE c.document_id = ? ORDER BY c.position"
+    )
+    params: tuple[int, ...] = (document_id,)
+    if limit is not None:
+        sql += " LIMIT ?"
+        params = (document_id, limit)
+
+    with get_connection() as conn:
+        rows = conn.execute(sql, params).fetchall()
+
+    return [
+        RetrievedChunk(
+            chunk_id=int(r["chunk_id"]),
+            document_id=int(r["document_id"]),
+            document_title=str(r["document_title"]),
+            text=str(r["text"]),
+            position=int(r["position"]),
+            distance=0.0,
+        )
+        for r in rows
+    ]
+
+
+async def get_document_chunks_async(
+    document_id: int, limit: int | None = None
+) -> list[RetrievedChunk]:
+    return await asyncio.to_thread(get_document_chunks, document_id, limit)

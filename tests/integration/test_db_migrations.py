@@ -25,16 +25,19 @@ def _index_names(conn: sqlite3.Connection) -> set[str]:
     return {r["name"] for r in rows}
 
 
-def test_apply_migrations_on_empty_db_creates_5_tables_and_6_indexes(tmp_path: Path) -> None:
+def test_apply_migrations_on_empty_db_creates_expected_schema(tmp_path: Path) -> None:
     db_path = tmp_path / "t.db"
     with get_connection(db_path) as conn:
         v = apply_migrations(conn)
-        # Após Fase 8 (calendar view), esperamos v=4 (001..004 aplicadas)
-        assert v == 4
+        # Após a Spec 007 (provas), esperamos v=5 (001..005 aplicadas)
+        assert v == 5
         tables = _table_names(conn)
         expected_base = {
             "documents", "chunks", "events", "tasks", "tool_call_logs",
             "chat_sessions", "chat_messages",
+            # Migration 005 (aprendizado / Spec 007)
+            "quizzes", "quiz_documents", "quiz_questions",
+            "quiz_attempts", "quiz_answers",
         }
         assert expected_base.issubset(tables)
         indexes = _index_names(conn)
@@ -45,6 +48,10 @@ def test_apply_migrations_on_empty_db_creates_5_tables_and_6_indexes(tmp_path: P
             "idx_tasks_due_at",
             "idx_tool_call_logs_ts",
             "idx_tool_call_logs_tool",
+            # Migration 005
+            "idx_quiz_questions_quiz",
+            "idx_quiz_attempts_quiz",
+            "idx_quiz_answers_attempt",
         }
         # sqlite cria índices automáticos para UNIQUE; verificamos só os nossos
         assert expected_indexes.issubset(indexes)
@@ -56,8 +63,8 @@ def test_apply_migrations_is_idempotent(tmp_path: Path) -> None:
         v1 = apply_migrations(conn)
         v2 = apply_migrations(conn)
         v3 = apply_migrations(conn)
-        # v final é 4 (001..004 aplicadas)
-        assert v1 == v2 == v3 == 4
+        # v final é 5 (001..005 aplicadas)
+        assert v1 == v2 == v3 == 5
 
 
 def test_db_ahead_of_code_raises(tmp_path: Path) -> None:

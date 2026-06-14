@@ -122,6 +122,7 @@ def get_registry() -> ToolRegistry:
     from src.tools import (  # noqa: F401 — imports têm efeito colateral de registro
         tool_agenda,
         tool_calendar,
+        tool_learning,
         tool_materials,
         tool_rag,
         tool_tasks,

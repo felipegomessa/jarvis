@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(default=5, gt=0)
     rag_distance_threshold: float = Field(default=0.6, ge=0.0, le=2.0)
 
+    # ----- Aprendizado / provas (Spec 007) -----
+    quiz_default_mc: int = Field(default=5, ge=0)
+    quiz_default_open: int = Field(default=3, ge=0)
+    quiz_max_chunks_per_doc: int = Field(default=12, gt=0)
+    quiz_weak_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+
     # ----- Logging -----
     log_level: str = Field(default="INFO")
     log_dir: Path = Field(default=Path("./logs"))

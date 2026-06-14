@@ -81,6 +81,8 @@ P7. **Reprodutibilidade** — Setup em máquina nova com `uv sync` instala tudo.
 | Calendário unificado | VIEW SQL `calendar_items_view` (events ∪ tasks) | [D-025](decisions.md#d-025) |
 | UI v2 | ChatGPT-style: sidebar Recentes + chat central pill + menu "+" + dialogs | [D-026](decisions.md#d-026) |
 | Locale Quasar | PT-BR via `ui.add_head_html` com `Quasar.lang.set({...})` | [D-026](decisions.md#d-026) |
+| Aprendizado (T2) | Prova eletrônica (MC + dissertativa, nota 0–10) + dificuldades/plano; camada `learning/` + migration 005 | [D-030](decisions.md#d-030) |
+| Relatório Word | `python-docx` (entregável acadêmico das funcionalidades) | [D-030](decisions.md#d-030) |
 
 ---
 
@@ -117,8 +119,10 @@ projeto/
 │   │   ├── agenda/                 # models, repo, service (3.2)
 │   │   ├── tasks/                  # models, repo, service (3.3)
 │   │   ├── chat/                   # models, repo, service (D-024 - sessões persistidas)
-│   │   └── calendar_view/          # service (D-025 - VIEW unificada eventos+tarefas)
-│   ├── tools/                      # registry + 10 tools em tool_*.py (incl. tool_calendar)
+│   │   ├── calendar_view/          # service (D-025 - VIEW unificada eventos+tarefas)
+│   │   └── learning/               # models, repo (D-030 - provas/tentativas/respostas)
+│   ├── learning/                   # generator, grader, coach, service (D-030 - LLM+RAG)
+│   ├── tools/                      # registry + 15 tools em tool_*.py (incl. tool_learning)
 │   ├── ui/                         # UI v2 ChatGPT-style (D-026)
 │   │   ├── theme.py                # CSS global + Inter + locale Quasar PT-BR
 │   │   ├── state.py                # singleton: gemma, agent, session_id, prompt_history
@@ -126,7 +130,7 @@ projeto/
 │   │   ├── components/             # sidebar, chat_view, prompt_input, tool_call_card,
 │   │   │                           #   date_picker, calendar_colors, calendar_month_view,
 │   │   │                           #   calendar_mini, calendar_wizard
-│   │   └── dialogs/                # materials, calendar (unificado), tasks_list, audit
+│   │   └── dialogs/                # materials, exam (prova D-030), calendar, tasks_list, audit
 │   └── main.py
 ├── tests/
 │   ├── unit/
@@ -136,13 +140,16 @@ projeto/
 
 ### 4.1 Regras de dependência entre camadas
 
-- `ui/` pode importar de `domain/`, `tools/`, `llm/`, `rag/`, `core/`.
-- `tools/` pode importar de `domain/`, `rag/`, `core/`.
+- `ui/` pode importar de `domain/`, `tools/`, `llm/`, `rag/`, `learning/`, `core/`.
+- `tools/` pode importar de `domain/`, `rag/`, `learning/`, `core/` (NÃO importa `llm/`/`ui/`).
+- `learning/` pode importar de `domain/`, `rag/`, `llm/`, `core/`; é importada por `ui/` e `tools/` (D-030).
 - `llm/` pode importar de `tools/` (para o agent loop) e `core/`.
 - `rag/` pode importar de `core/`.
 - `domain/` pode importar apenas de `core/`.
 - `core/` não importa de nada interno (apenas stdlib + libs externas).
-- **Importações circulares são proibidas**.
+- **Importações circulares são proibidas**. `tools/` chega ao LLM via `learning/`
+  (que usa `llm.get_default_client`), nunca importando `llm/` direto — evita o ciclo
+  `llm/agent ↔ tools/registry`.
 
 ---
 

@@ -13,10 +13,12 @@ from src.core.db import apply_migrations, get_connection, smoke_check_vec
 from src.core.health import get_health, set_health
 from src.core.logging import configure_logging
 from src.llm import AgentLoop, GemmaClient
+from src.llm.client import set_default_client
 from src.ui.components.chat_view import ChatView
 from src.ui.components.sidebar import render_sidebar
 from src.ui.dialogs.audit_dialog import open_audit_dialog
 from src.ui.dialogs.calendar_dialog import open_calendar_dialog
+from src.ui.dialogs.exam_dialog import open_exam_dialog
 from src.ui.dialogs.materials_dialog import open_materials_dialog
 from src.ui.dialogs.tasks_list_dialog import open_tasks_list_dialog
 from src.ui.state import set_clients
@@ -34,6 +36,7 @@ async def _bootstrap() -> None:
         logger.info(f"DB schema v{v}")
 
     gemma = GemmaClient(settings)
+    set_default_client(gemma)  # disponibiliza o client p/ camadas fora da UI (D-030)
     ok = await gemma.healthcheck(timeout_s=15.0)
     set_health("ONLINE" if ok else "OFFLINE", error=None if ok else "healthcheck=False")
     if ok:
@@ -81,6 +84,7 @@ def index_page() -> None:
         chat_view.render(
             dialog_openers={
                 "Enviar material": ("upload_file", open_materials_dialog),
+                "Estudar / Prova": ("school", open_exam_dialog),
                 "Calendário (eventos + tarefas)": ("event", open_calendar_dialog),
                 "Lista de tarefas": ("checklist", open_tasks_list_dialog),
                 "Pesquisar auditoria": ("history", open_audit_dialog),

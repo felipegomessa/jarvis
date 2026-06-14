@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import sqlite3
 from pathlib import Path
 
@@ -21,6 +22,38 @@ SUPPORTED_EXT = {".pdf", ".txt", ".md"}
 # polui o retrieval (o README do dataset chegava a ranquear em #1 para perguntas
 # conceituais, sem conter conteúdo real). Comparação por nome, case-insensitive.
 EXCLUDED_FILENAMES = {"readme.md"}
+
+# Fração mínima de "palavras reais" para o texto extraído ser considerado legível.
+# Calibrado contra o dataset: documentos bons ficam em 0.53-0.69; um PDF cujas
+# fontes não têm mapa de caracteres (sem ToUnicode) extrai apenas marcadores
+# `(cid:N)` ou caracteres de controle e cai para ~0.00. O corte em 0.25 separa os
+# dois casos com folga, sem rejeitar documentos parcialmente sujos (figuras/fórmulas).
+MIN_REAL_WORD_RATIO = 0.25
+
+# Um "token de palavra" é uma sequência de 2+ letras (inclui acentuadas PT-BR).
+_WORD_RE = re.compile(r"^[A-Za-zÀ-ÿ]{2,}$")
+
+
+def real_word_ratio(text: str) -> float:
+    """Fração de tokens que parecem palavras reais (2+ letras) sobre o total.
+
+    Métrica robusta para detectar lixo de extração: marcadores `(cid:1)` e
+    caracteres de controle não casam com `_WORD_RE`, derrubando a razão a ~0.
+    """
+    tokens = text.split()
+    if not tokens:
+        return 0.0
+    real = sum(1 for t in tokens if _WORD_RE.match(t))
+    return real / len(tokens)
+
+
+def is_readable_text(text: str) -> bool:
+    """True se o texto extraído tem palavras reais suficientes para indexar.
+
+    Cumpre a política do CLAUDE.md §8: um PDF sem texto extraível (fonte sem mapa
+    de caracteres → `(cid:N)`/lixo binário) deve ser pulado, não indexado.
+    """
+    return real_word_ratio(text) >= MIN_REAL_WORD_RATIO
 
 
 def _compute_sha256(path: Path, buf_size: int = 64 * 1024) -> str:
@@ -143,6 +176,27 @@ def ingest_document(path: Path) -> IngestResult:
                 source_path=spath,
                 reason="no_text",
                 error="texto extraído está vazio (PDF scaneado?)",
+            )
+
+        # 3b) Valida a QUALIDADE do texto extraído (CLAUDE.md §8). PDFs cujas fontes
+        #     não têm mapa de caracteres extraem só lixo `(cid:N)`/controle — que
+        #     não é vazio, mas envenena o índice se for embeddado. Recusamos aqui.
+        ratio = real_word_ratio(text)
+        if ratio < MIN_REAL_WORD_RATIO:
+            logger.warning(
+                f"texto ilegível em {path.name} "
+                f"(palavras reais={ratio:.0%} < {MIN_REAL_WORD_RATIO:.0%}); "
+                "PDF sem texto extraível (fonte sem mapa de caracteres?) — pulado. "
+                "Use OCR ou substitua por uma cópia com texto selecionável."
+            )
+            return IngestResult(
+                status="error",
+                source_path=spath,
+                reason="unreadable_text",
+                error=(
+                    f"texto extraído ilegível ({ratio:.0%} de palavras reais); "
+                    "PDF sem texto selecionável — necessita OCR ou cópia limpa"
+                ),
             )
 
         # 4) Chunkifica

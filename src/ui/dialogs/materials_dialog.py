@@ -26,59 +26,91 @@ def open_materials_dialog() -> None:
             )
 
         ui.label(
-            "Carregue PDFs, .txt ou .md. O conteúdo será indexado para responder "
-            "perguntas via RAG."
+            "Duas formas de adicionar materiais (.pdf, .txt, .md) ao acervo. "
+            "O conteúdo é indexado para responder perguntas via RAG."
         ).classes("jarvis-dialog-subtitle")
 
         # ---------------- Drop zone (upload + indexar pasta) ----------------
         async def on_upload(e: events.UploadEventArguments) -> None:
-            upload_dir = Path("./data/uploads")
-            upload_dir.mkdir(parents=True, exist_ok=True)
-            target = upload_dir / e.name
-            with open(target, "wb") as f:
-                f.write(e.content.read())
+            # NiceGUI 3.x: o arquivo vem em e.file (FileUpload), com .name e .save().
+            name = e.file.name
+            target = Path("./data/uploads") / name
+            try:
+                await e.file.save(target)  # cria a pasta e grava (async)
+            except Exception as exc:  # feedback amigável na UI em vez de crash
+                logger.exception(f"falha ao salvar upload {name}")
+                ui.notify(f"Erro ao salvar '{name}': {exc}", type="negative")
+                return
             logger.info(f"upload recebido: {target}")
             ui.notify(
-                f"Indexando '{e.name}'… (pode demorar na 1ª vez)",
+                f"Indexando '{name}'… (pode demorar na 1ª vez)",
                 type="info",
                 timeout=2000,
             )
             result = await asyncio.to_thread(ingest_document, target)
             if result.status == "ingested":
-                ui.notify(
-                    f"OK: {e.name} ({result.chunk_count} chunks)",
-                    type="positive",
-                )
+                ui.notify(f"OK: {name} ({result.chunk_count} chunks)", type="positive")
             elif result.status == "skipped":
-                ui.notify(f"Já existia: {e.name} (hash igual)", type="info")
+                ui.notify(f"Já existia: {name} (hash igual)", type="info")
             else:
                 ui.notify(
-                    f"Erro: {e.name} — {result.reason}: {result.error}",
-                    type="negative",
+                    f"Erro: {name} — {result.reason}: {result.error}", type="negative"
                 )
             refresh()
 
         async def on_index_data() -> None:
-            ui.notify("Indexando pasta /data…", type="info")
-            results = await asyncio.to_thread(ingest_directory, Path("./data"))
+            ui.notify("Indexando pasta /data (incluindo subpastas)…", type="info")
+            # recursive=True: os materiais ficam em data/Artigos, data/Material de Aula,
+            # etc. Sem isso a raiz data/ não tem PDFs e a indexação não acha nada.
+            results = await asyncio.to_thread(
+                ingest_directory, Path("./data"), True
+            )
             ing = sum(1 for r in results if r.status == "ingested")
             sk = sum(1 for r in results if r.status == "skipped")
             er = sum(1 for r in results if r.status == "error")
-            ui.notify(
-                f"{ing} novos · {sk} já existiam · {er} erros",
-                type="positive" if er == 0 else "warning",
-            )
+            if not results:
+                ui.notify(
+                    "Nenhum arquivo .pdf/.txt/.md encontrado em /data.",
+                    type="warning",
+                )
+            else:
+                ui.notify(
+                    f"{ing} novos · {sk} já existiam · {er} erros",
+                    type="positive" if er == 0 else "warning",
+                )
             refresh()
 
+        # ===== Opção A: enviar um arquivo do computador (envio automático) =====
         with ui.element("div").classes("jarvis-upload-zone w-full"):
-            with ui.row().classes("w-full gap-3 items-center no-wrap"):
-                ui.upload(
-                    label="Selecionar arquivo (.pdf / .txt / .md)",
-                    on_upload=on_upload,
-                    multiple=False,
-                    max_file_size=50_000_000,
-                    auto_upload=True,
-                ).props("accept='.pdf,.txt,.md' color=primary").classes("flex-1")
+            ui.label("A) Enviar um arquivo do seu computador").style(
+                "font-weight:600; color:var(--jarvis-text); font-size:14px"
+            )
+            ui.label(
+                "Clique no botão de upload abaixo, escolha o arquivo e confirme. "
+                "O envio e a indexação são automáticos ao selecionar — aguarde a "
+                "notificação de confirmação no canto da tela."
+            ).style("font-size:12px; color:#9aa; margin:2px 0 8px")
+            ui.upload(
+                label="Escolher arquivo (.pdf / .txt / .md)",
+                on_upload=on_upload,
+                multiple=False,
+                max_file_size=50_000_000,
+                auto_upload=True,
+            ).props("accept='.pdf,.txt,.md' color=primary").classes("w-full")
+
+        # ===== Opção B: indexar a pasta data/ do projeto (e subpastas) =====
+        with ui.element("div").classes("jarvis-upload-zone w-full").style(
+            "margin-top:10px"
+        ):
+            with ui.row().classes("w-full items-center justify-between no-wrap"):
+                with ui.column().classes("gap-0 flex-1 min-w-0"):
+                    ui.label("B) Indexar a pasta data/ do projeto").style(
+                        "font-weight:600; color:var(--jarvis-text); font-size:14px"
+                    )
+                    ui.label(
+                        "Varre data/ e suas subpastas (Artigos, Material de Aula…) e "
+                        "indexa os materiais já presentes no repositório."
+                    ).style("font-size:12px; color:#9aa")
                 ui.button(
                     "Indexar pasta /data",
                     icon="folder_open",

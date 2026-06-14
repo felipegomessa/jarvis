@@ -25,10 +25,9 @@ env/
 *.sqlite
 *.sqlite3
 
-# Dataset: livros-texto de terceiros (~88 MB) — recuperáveis pelo link do Drive
-# documentado em data/README.md. Os 5 docs indexados (Artigos + Material de Aula)
-# permanecem versionados.
-data/Livros/
+# Dataset: o acervo completo (artigos + livros-texto) é versionado no repositório
+# (ver data/README.md). A pasta temporária de uploads da UI NÃO é versionada:
+data/uploads/
 
 # Logs
 logs/
