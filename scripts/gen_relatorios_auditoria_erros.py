@@ -191,7 +191,8 @@ def build_auditoria(doc: Document) -> None:
         ["Item (pergunta)", "Avaliação", "Justificativa"],
         [
             ["O dataset tem pelo menos 10 documentos acadêmicos?", OK,
-             "11 documentos (artigos, material de aula e livros-texto de IA/ML)."],
+             "10 documentos (artigos, material de aula e livros-texto de IA/ML), "
+             "todos legíveis e indexados."],
             ["Está em /data no repositório ou link externo?", OK,
              "Versionado em data/ (Artigos, Material de Aula, Livros)."],
             ["A documentação cobre origem, tipo e limitações?", OK,
@@ -292,7 +293,7 @@ def build_analise_erros(doc: Document) -> None:
         ["#", "Falha", "Tipo", "Status"],
         [
             ["1", "Extração de PDF ilegível indexada como lixo", "Recuperação / "
-             "Ingestão", "Corrigida"],
+             "Ingestão", "Corrigida (doc removido)"],
             ["2", "Trechos irrelevantes enviados como contexto", "Recuperação / "
              "Relevância", "Em aberto"],
             ["3", "Resposta sem aterramento obrigatório no material", "Geração",
@@ -316,7 +317,11 @@ def build_analise_erros(doc: Document) -> None:
         "(real_word_ratio) que rejeita texto com menos de 25% de palavras reais, "
         "registrando aviso em log e pulando o arquivo (decisão D-029). O documento "
         "deixou de poluir o índice. Recuperá-lo exigiria OCR.")
-    w.b("Status: CORRIGIDA.")
+    w.b("Encaminhamento posterior: por ser irrecuperável sem OCR, o artigo foi "
+        "REMOVIDO do dataset. O acervo final passou a ter 10 documentos, todos "
+        "legíveis e indexados. O guarda de qualidade (D-029) permanece no pipeline "
+        "para barrar casos semelhantes em ingestões futuras.")
+    w.b("Status: CORRIGIDA (pipeline protegido; documento removido do dataset).")
 
     w.h("4. Falha 2 — Trechos irrelevantes enviados como contexto", 1)
     w.b("Tipo: recuperação / relevância.", True)
