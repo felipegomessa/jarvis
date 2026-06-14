@@ -2,9 +2,8 @@
 
 Este diretório contém os documentos acadêmicos usados pelo RAG.
 
-> **Requisito de Dataset**: mínimo de 10 documentos. ✅ **11 documentos** no acervo
-> (`data/`), dos quais **10 indexados** no RAG (o 11º, *The Origins of Logistic
-> Regression*, é rejeitado pelo guarda de qualidade de ingestão — ver Limitações).
+> **Requisito de Dataset**: mínimo de 10 documentos. ✅ **10 documentos** no acervo
+> (`data/`), **todos indexados** no RAG.
 
 ## Procedência
 
@@ -17,7 +16,7 @@ Este diretório contém os documentos acadêmicos usados pelo RAG.
   terceiros (autores/editoras indicados) e ficam no acervo apenas para fins de
   estudo da disciplina; não são redistribuídos.
 
-## Inventário (11 documentos)
+## Inventário (10 documentos)
 
 Estrutura em `data/` por categoria. **Indexado no RAG = entra no índice vetorial
 (`chunk_vecs`)**. Todo o acervo é versionado no repositório.
@@ -25,19 +24,17 @@ Estrutura em `data/` por categoria. **Indexado no RAG = entra no índice vetoria
 | # | Arquivo | Categoria | Tamanho | Tema | Indexado | Chunks |
 |---|---------|-----------|---------|------|----------|--------|
 | 1 | `Artigos/Adaptive_Chunking_Optimizing_Chunking-Method_Selection_for_RAG.pdf` | Artigo | ~490 KB | Chunking adaptativo para RAG | ✅ | 70 |
-| 2 | `Artigos/The_Origins_of_Logistic_Regression.pdf` | Artigo | ~185 KB | História/fundamentos da regressão logística | ❌ ilegível | 0 |
-| 3 | `Artigos/Understanding TF-IDF ... GeeksforGeeks.pdf` | Artigo | ~927 KB | TF-IDF (term frequency–inverse document frequency) | ✅ | 11 |
-| 4 | `Artigos/Understanding-the-Role-of-Large-Language-Models-in-Software-Engineering.pdf` | Artigo | ~926 KB | Papel dos LLMs na Engenharia de Software | ✅ | 91 |
-| 5 | `Material de Aula/aula-KNN.pdf` | Aula | ~732 KB | Algoritmo k-vizinhos mais próximos (KNN) | ✅ | 20 |
-| 6 | `Material de Aula/lista1.pdf` | Aula | ~154 KB | Lista de exercícios (regressão, gradiente, TF-IDF) | ✅ | 18 |
-| 7 | `Livros/Artificial_Intelligence_A_Modern_Approach...pdf` | Livro | ~4,8 MB | IA — abordagem moderna (Russell & Norvig) | ✅ | 478 |
-| 8 | `Livros/Ian Goodfellow... - Deep Learning (2017, MIT).pdf` | Livro | ~16 MB | Deep Learning (Goodfellow, Bengio, Courville) | ✅ | 2.679 |
-| 9 | `Livros/Text Book Machine LEarning.pdf` | Livro | ~20 MB | Aprendizado de máquina (livro-texto) | ✅ | 1.609 |
-| 10 | `Livros/art_of_ml.pdf` | Livro | ~9,3 MB | The Art of Machine Learning | ✅ | 1.214 |
-| 11 | `Livros/ddidl.pdf` | Livro | ~38 MB | Deep Learning (livro-texto) | ✅ | 3.312 |
+| 2 | `Artigos/Understanding TF-IDF ... GeeksforGeeks.pdf` | Artigo | ~927 KB | TF-IDF (term frequency–inverse document frequency) | ✅ | 11 |
+| 3 | `Artigos/Understanding-the-Role-of-Large-Language-Models-in-Software-Engineering.pdf` | Artigo | ~926 KB | Papel dos LLMs na Engenharia de Software | ✅ | 91 |
+| 4 | `Material de Aula/aula-KNN.pdf` | Aula | ~732 KB | Algoritmo k-vizinhos mais próximos (KNN) | ✅ | 20 |
+| 5 | `Material de Aula/lista1.pdf` | Aula | ~154 KB | Lista de exercícios (regressão, gradiente, TF-IDF) | ✅ | 18 |
+| 6 | `Livros/Artificial_Intelligence_A_Modern_Approach...pdf` | Livro | ~4,8 MB | IA — abordagem moderna (Russell & Norvig) | ✅ | 478 |
+| 7 | `Livros/Ian Goodfellow... - Deep Learning (2017, MIT).pdf` | Livro | ~16 MB | Deep Learning (Goodfellow, Bengio, Courville) | ✅ | 2.679 |
+| 8 | `Livros/Text Book Machine LEarning.pdf` | Livro | ~20 MB | Aprendizado de máquina (livro-texto) | ✅ | 1.609 |
+| 9 | `Livros/art_of_ml.pdf` | Livro | ~9,3 MB | The Art of Machine Learning | ✅ | 1.214 |
+| 10 | `Livros/ddidl.pdf` | Livro | ~38 MB | Deep Learning (livro-texto) | ✅ | 3.312 |
 
-**Índice RAG atual**: 10 documentos indexados, **9.502 chunks** (`chunk_vecs`). O
-documento #2 (*The Origins*) não entra no índice (ver Limitações).
+**Índice RAG atual**: 10 documentos indexados, **9.502 chunks** (`chunk_vecs`).
 
 ### Índice pré-construído (opcional — para facilitar a avaliação)
 
@@ -54,9 +51,10 @@ pois as *queries* são embeddadas em tempo de execução.
 
 O acervo completo — artigos, material de aula e livros-texto — é indexado, dando
 ao RAG ampla cobertura para a avaliação e para a geração de provas (Trabalho 2).
-Cada documento legível é fatiado e embeddado (ver "Estratégia de chunking"). O
-único documento não indexado é o *The Origins of Logistic Regression*, rejeitado
-automaticamente pelo guarda de qualidade de ingestão (ver Limitações).
+Cada documento é fatiado e embeddado (ver "Estratégia de chunking"). A ingestão
+ainda conta com um guarda de qualidade que **rejeita PDFs sem texto extraível**
+(fontes sem mapa de caracteres → lixo `(cid:N)`), evitando poluir o índice — ver
+ADR [D-029](../decisions.md#d-029) e Limitações.
 
 Re-indexar todo o acervo do zero:
 
@@ -98,12 +96,11 @@ Conforme ADR [D-006](../decisions.md#d-006) (refinado em
 - **Artefatos de extração (pdfplumber)** em PDFs matemáticos: ligaduras e perda de
   espaços (ex.: `func¸˜ao`, `Expliqueoimpactoda...`) em `lista1.pdf` e em trechos
   com fórmulas. Degrada um pouco a qualidade do embedding/leitura nesses trechos.
-- **`The_Origins_of_Logistic_Regression.pdf` é ilegível por extração de texto**: o
-  PDF usa fontes sem mapa de caracteres (sem ToUnicode), e `pdfplumber`, `pdfminer`
-  e PyMuPDF extraem apenas marcadores `(cid:N)` (0% de palavras reais). O guarda de
-  qualidade de ingestão (ADR [D-029](../decisions.md#d-029)) **rejeita** o arquivo
-  para não poluir o índice. Recuperação exigiria OCR. É o documento #2 do acervo,
-  mantido como exemplo documentado de falha de recuperação (análise de erros).
+- **PDFs sem texto extraível são rejeitados na ingestão**: alguns PDFs usam fontes
+  sem mapa de caracteres (sem ToUnicode), de onde `pdfplumber`, `pdfminer` e PyMuPDF
+  extraem apenas marcadores `(cid:N)` (0% de palavras reais). Um guarda de qualidade
+  (ADR [D-029](../decisions.md#d-029)) detecta e recusa esses arquivos para não
+  poluir o índice; recuperá-los exigiria OCR (fora de escopo).
 - **PDFs scaneados / OCR**: o pipeline não faz OCR (fora de escopo).
 - **Tabelas/fórmulas** podem ser linearizadas de forma sub-ótima.
 - **Livros-texto inteiros** aumentam o volume de chunks e podem introduzir ruído de
