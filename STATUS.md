@@ -29,15 +29,12 @@ ampliado para **11 docs (10 indexados)** e reorganizado (`data/Livros/` versiona
 `data/uploads/` gitignored); relatório Word gerado (`scripts/gen_relatorio_aprendizado.py`,
 saída em `docs/` que é gitignored); upload e ingestão corrigidos.
 
-**EM ANDAMENTO ao pausar — terminar o commit do índice `.db`**:
-1. Regenerando `data/jarvis.db` limpo (background) → conferir **10 docs / ~9.502
-   chunks**, source_paths em `data/Livros`/`data/Artigos`, The_Origins rejeitado.
-   Se preciso refazer: apagar `data/jarvis.db*` → `apply_migrations` +
-   `ingest_directory(Path('data'), recursive=True)`.
-2. `python -m scripts.seed_demo --no-ingest` (agenda+tarefas de demo).
-3. `git add -f data/jarvis.db` (gitignored via `*.db`) + nota no `data/README.md`
-   ("índice pré-construído, opcional") + commit + push. **Decisão**: subir o `.db`
-   pré-construído facilita a correção (prof tem 40 alunos → turnkey).
+**Índice `.db` pré-construído — CONCLUÍDO** (commit `3c23c2e`, pushado):
+`data/jarvis.db` (25 MB) versionado com **10 docs / 9.502 chunks** (The_Origins
+rejeitado) + demo de **4 eventos e 4 tarefas**. `.gitignore` com exceção
+`!data/jarvis.db`. Permite rodar o sistema **sem reindexar** (turnkey p/ correção).
+Regenerável: apagar `data/jarvis.db*` → `apply_migrations` +
+`ingest_directory(Path('data'), recursive=True)` + `seed_demo --no-ingest`.
 
 **Pendências humanas**:
 - **Gravar vídeo ≤3min do T2** (prova + plano; o do T1 só cobria 3.1/3.2/3.3).
