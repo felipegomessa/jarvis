@@ -39,6 +39,17 @@ Estrutura em `data/` por categoria. **Indexado no RAG = entra no índice vetoria
 **Índice RAG atual**: 10 documentos indexados, **9.502 chunks** (`chunk_vecs`). O
 documento #2 (*The Origins*) não entra no índice (ver Limitações).
 
+### Índice pré-construído (opcional — para facilitar a avaliação)
+
+Para que o sistema rode **sem precisar reindexar** (a indexação dos livros leva
+vários minutos), o banco já indexado é versionado no repositório em
+`data/jarvis.db` (~25 MB, inclui o índice vetorial + dados de demonstração de
+agenda e tarefas). Basta preencher o token do LLM no `.env` e rodar `python -m
+src.main`. O `.db` é um **artefato de conveniência**: pode ser regenerado a
+qualquer momento com os comandos de "Como re-ingerir do zero" abaixo. O modelo de
+embeddings (`multilingual-e5-small`, ~120 MB) ainda é baixado na primeira pergunta,
+pois as *queries* são embeddadas em tempo de execução.
+
 ## Decisão de indexação
 
 O acervo completo — artigos, material de aula e livros-texto — é indexado, dando

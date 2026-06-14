@@ -24,13 +24,25 @@ requisito obrigatório do T2 (≥2 funcionalidades, ≥1 interativa):
 - **Dep nova**: `python-docx` (relatório Word). `pytest` **162 passed / 3 skipped**,
   `ruff` limpo.
 
-**Próximos passos (sequência combinada)**:
-1. **Resolver o dataset** — recuperar *The Origins* (OCR/cópia limpa) + chegar a
-   ≥10 docs indexados. (Vem ANTES dos testes funcionais.)
-2. **Testar** as 2 funcionalidades com a LLM real (gerar prova → responder →
-   nota → plano).
-3. **Relatório Word das 2 funcionalidades** (RF-007.10 / T-007.15) — entregável.
-4. (Por último) relatórios Word de auditoria do enunciado + análise de erros.
+**Feito (2026-06-13/14)**: Spec 007 implementada + commit/push (`672cfa1`); dataset
+ampliado para **11 docs (10 indexados)** e reorganizado (`data/Livros/` versionado,
+`data/uploads/` gitignored); relatório Word gerado (`scripts/gen_relatorio_aprendizado.py`,
+saída em `docs/` que é gitignored); upload e ingestão corrigidos.
+
+**EM ANDAMENTO ao pausar — terminar o commit do índice `.db`**:
+1. Regenerando `data/jarvis.db` limpo (background) → conferir **10 docs / ~9.502
+   chunks**, source_paths em `data/Livros`/`data/Artigos`, The_Origins rejeitado.
+   Se preciso refazer: apagar `data/jarvis.db*` → `apply_migrations` +
+   `ingest_directory(Path('data'), recursive=True)`.
+2. `python -m scripts.seed_demo --no-ingest` (agenda+tarefas de demo).
+3. `git add -f data/jarvis.db` (gitignored via `*.db`) + nota no `data/README.md`
+   ("índice pré-construído, opcional") + commit + push. **Decisão**: subir o `.db`
+   pré-construído facilita a correção (prof tem 40 alunos → turnkey).
+
+**Pendências humanas**:
+- **Gravar vídeo ≤3min do T2** (prova + plano; o do T1 só cobria 3.1/3.2/3.3).
+- Inserir prints no relatório Word (seção 7).
+- (Por último) relatórios Word de auditoria do enunciado + análise de erros.
 
 ## 🧭 ONDE PARAMOS (2026-06-12, ~21h) — ler isto primeiro
 

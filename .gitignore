@@ -19,11 +19,15 @@ env/
 *.env
 !.env.example
 
-# SQLite (índice regenerável via `populate` + `seed_demo`)
+# SQLite (índices regeneráveis). EXCEÇÃO: data/jarvis.db é versionado como índice
+# pré-construído (conveniência de avaliação — ver data/README.md).
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+!data/jarvis.db
 
 # Dataset: o acervo completo (artigos + livros-texto) é versionado no repositório
 # (ver data/README.md). A pasta temporária de uploads da UI NÃO é versionada:
